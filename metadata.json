@@ -1,0 +1,8 @@
+{
+  "name": "KitabGhar POS & Uniform ERP",
+  "description": "Production-ready offline Windows desktop POS, inventory, uniform variant management, accounting, and billing system for stationery, school uniforms, school bags, and books.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
