@@ -218,6 +218,21 @@ export interface SalePayment {
   date: string;
 }
 
+export interface SaleReturnItem {
+  saleItemId: string;
+  productId: string;
+  variantId?: string;
+  uniformSetId?: string;
+  variantDetails?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  costPrice: number;
+  refundAmount: number;
+  reason: string;
+  date?: string;
+}
+
 export interface Sale {
   id: string;
   invoiceNumber: string;
@@ -243,6 +258,7 @@ export interface Sale {
   userId: string;
   userName: string;
   createdAt: string;
+  returnedItems?: SaleReturnItem[];
 }
 
 export interface HeldBill {
@@ -254,18 +270,6 @@ export interface HeldBill {
   items: SaleItem[];
   discount: number;
   notes?: string;
-}
-
-export interface SaleReturnItem {
-  saleItemId: string;
-  productId: string;
-  variantId?: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  costPrice: number;
-  refundAmount: number;
-  reason: string;
 }
 
 export interface SaleReturn {
@@ -331,6 +335,7 @@ export interface PurchaseReturn {
   id: string;
   returnNumber: string;
   purchaseId?: string;
+  purchaseInvoiceNo?: string;
   supplierId: string;
   supplierName: string;
   date: string;

@@ -670,7 +670,19 @@ export const SaleHistoryView: React.FC<SaleHistoryViewProps> = ({
                   return (
                     <tr key={sale.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {sale.invoiceNumber}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{sale.invoiceNumber}</span>
+                          {sale.status === 'returned_full' && (
+                            <span className="text-[9px] px-1.5 py-0.2 bg-red-100 text-red-800 rounded-md font-bold uppercase border border-red-200">
+                              Fully Returned
+                            </span>
+                          )}
+                          {sale.status === 'returned_partial' && (
+                            <span className="text-[9px] px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded-md font-bold uppercase border border-amber-200">
+                              Partial Return
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
                         <div>{new Date(sale.date).toLocaleDateString()}</div>
@@ -690,12 +702,23 @@ export const SaleHistoryView: React.FC<SaleHistoryViewProps> = ({
                         )}
                       </td>
                       <td className="py-3 px-4 max-w-xs">
-                        <div className="truncate font-medium text-slate-800">
-                          {sale.items.map((i) => `${i.productName} (x${i.quantity})`).join(', ')}
-                        </div>
+                        {sale.items.length === 0 ? (
+                          <div className="text-red-600 font-bold text-[11px]">
+                            [All items returned & refunded]
+                          </div>
+                        ) : (
+                          <div className="truncate font-medium text-slate-800">
+                            {sale.items.map((i) => `${i.productName} (x${i.quantity})`).join(', ')}
+                          </div>
+                        )}
                         <div className="text-[10px] text-slate-400">
                           {sale.items.length} line items
                         </div>
+                        {sale.returnedItems && sale.returnedItems.length > 0 && (
+                          <div className="text-[10px] text-rose-700 font-bold mt-0.5 truncate">
+                            ↩ Returned: {sale.returnedItems.map((r) => `${r.productName} (x${r.quantity})`).join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-extrabold text-slate-900">
                         {formatCurrency(sale.grandTotal)}
@@ -743,11 +766,22 @@ export const SaleHistoryView: React.FC<SaleHistoryViewProps> = ({
                           {/* Return Button */}
                           <button
                             onClick={() => {
-                              setReturningSale(sale);
-                              setIsReturnModalOpen(true);
+                              if (sale.status !== 'returned_full') {
+                                setReturningSale(sale);
+                                setIsReturnModalOpen(true);
+                              }
                             }}
-                            className="p-1.5 text-amber-700 hover:bg-amber-100 rounded transition"
-                            title="Process Return for this Invoice"
+                            disabled={sale.status === 'returned_full'}
+                            className={`p-1.5 rounded transition ${
+                              sale.status === 'returned_full'
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-amber-700 hover:bg-amber-100'
+                            }`}
+                            title={
+                              sale.status === 'returned_full'
+                                ? 'Invoice already fully returned and refunded'
+                                : 'Process Return for this Invoice'
+                            }
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>

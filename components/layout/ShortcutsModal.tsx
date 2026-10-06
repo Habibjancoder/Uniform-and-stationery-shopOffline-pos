@@ -18,6 +18,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose }) => {
     { key: 'F4', desc: 'Quick Add New Customer / School profile' },
     { key: 'F6', desc: 'Hold / Park active invoice in cart' },
     { key: 'F7', desc: 'Open Held Bills list' },
+    { key: 'Alt+R', desc: 'Customer Sale Return, Restock & Refund' },
     { key: 'F8', desc: 'Open Payment Modal & choose payment method' },
     { key: 'F9', desc: 'Reprint last completed customer receipt' },
     { key: 'F10', desc: 'Clear active cart' },

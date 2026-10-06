@@ -45,6 +45,7 @@ import {
 import { CustomerQuickModal } from './CustomerQuickModal';
 import { HeldBillsModal } from './HeldBillsModal';
 import { InvoicePrintModal } from './InvoicePrintModal';
+import { SaleReturnModal } from '../sales/SaleReturnModal';
 
 interface POSViewProps {
   settings: ShopSettings;
@@ -82,6 +83,7 @@ export const POSView: React.FC<POSViewProps> = ({
   const [isHeldModalOpen, setIsHeldModalOpen] = useState(false);
   const [heldBills, setHeldBills] = useState<HeldBill[]>([]);
   const [isQuickCustomerOpen, setIsQuickCustomerOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -775,6 +777,11 @@ export const POSView: React.FC<POSViewProps> = ({
         e.preventDefault();
         setIsHeldModalOpen(true);
       }
+      // Alt+R: Customer Return & Restock
+      else if (e.altKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setIsReturnModalOpen(true);
+      }
       // F8: Open Payment Modal
       else if (e.key === 'F8') {
         e.preventDefault();
@@ -797,6 +804,7 @@ export const POSView: React.FC<POSViewProps> = ({
         setIsPaymentModalOpen(false);
         setIsHeldModalOpen(false);
         setIsQuickCustomerOpen(false);
+        setIsReturnModalOpen(false);
         setIsPrintModalOpen(false);
         setShowShortcutsHelp(false);
         setErrorMessage(null);
@@ -965,6 +973,17 @@ export const POSView: React.FC<POSViewProps> = ({
           >
             <Clock className="w-3.5 h-3.5 text-amber-600" />
             <span>Held ({heldBills.length}) [F7]</span>
+          </button>
+
+          {/* Return Bill & Restock Button */}
+          <button
+            type="button"
+            onClick={() => setIsReturnModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+            title="Customer Return & Restock [Alt+R]"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+            <span>Return Bill [Alt+R]</span>
           </button>
 
           {/* Hold Current Bill */}
@@ -1567,6 +1586,18 @@ export const POSView: React.FC<POSViewProps> = ({
             setSelectedCustomerId(newCust.id);
             setIsQuickCustomerOpen(false);
           }}
+        />
+      )}
+
+      {/* Sale Return & Restock Modal */}
+      {isReturnModalOpen && (
+        <SaleReturnModal
+          onSuccess={() => {
+            setIsReturnModalOpen(false);
+            loadData();
+            if (onRefreshDatabase) onRefreshDatabase();
+          }}
+          onClose={() => setIsReturnModalOpen(false)}
         />
       )}
 

@@ -11,8 +11,11 @@ import {
   Product,
   ProductVariant,
   Purchase,
+  PurchaseItem,
   PurchaseReturn,
+  PurchaseReturnItem,
   Sale,
+  SaleItem,
   SaleReturn,
   School,
   ShopSettings,
@@ -180,6 +183,105 @@ class DatabaseStore {
     }
 
     this.initialized = true;
+    this.reconcileReturns();
+  }
+
+  // Auto-reconcile existing sale returns with invoice items if not yet deducted
+  private reconcileReturns(): void {
+    const returns = this.getItem<SaleReturn[]>(STORAGE_KEYS.SALE_RETURNS, []);
+    if (!returns || returns.length === 0) return;
+
+    const sales = this.getItem<Sale[]>(STORAGE_KEYS.SALES, []);
+    let modified = false;
+
+    for (let sIdx = 0; sIdx < sales.length; sIdx++) {
+      const sale = sales[sIdx];
+      const sInvClean = (sale.invoiceNumber || '').trim().toLowerCase();
+      const sDigits = sInvClean.replace(/[^0-9]/g, '');
+
+      const matchingReturns = returns.filter((r) => {
+        if (r.saleId && r.saleId === sale.id) return true;
+        const rInvClean = (r.invoiceNumber || '').trim().toLowerCase();
+        if (rInvClean === sInvClean) return true;
+        const rDigits = rInvClean.replace(/[^0-9]/g, '');
+        if (sDigits && rDigits === sDigits) return true;
+        return false;
+      });
+
+      if (matchingReturns.length === 0) continue;
+
+      for (const ret of matchingReturns) {
+        if (sale.notes && sale.notes.includes(ret.returnNumber)) {
+          // If notes already recorded, just ensure returnedItems is populated
+          if (!sale.returnedItems) {
+            sale.returnedItems = ret.items.map((ri) => ({ ...ri }));
+            sales[sIdx] = sale;
+            modified = true;
+          }
+          continue;
+        }
+
+        if (!sale.returnedItems) {
+          sale.returnedItems = [];
+        }
+        for (const retItem of ret.items) {
+          sale.returnedItems.push({ ...retItem });
+        }
+
+        const updatedItems: SaleItem[] = [];
+        for (const saleItem of sale.items) {
+          const retItem = ret.items.find(
+            (r) =>
+              (r.saleItemId && r.saleItemId === saleItem.id) ||
+              (r.productId === saleItem.productId &&
+                (r.variantId ? r.variantId === saleItem.variantId : !saleItem.variantId))
+          );
+
+          if (retItem) {
+            const rem = saleItem.quantity - retItem.quantity;
+            if (rem > 0) {
+              const perUnitDisc = saleItem.quantity > 0 ? saleItem.discount / saleItem.quantity : 0;
+              const newDisc = Math.round(perUnitDisc * rem);
+              const newTotal = Math.round(rem * saleItem.unitPrice - newDisc);
+              updatedItems.push({
+                ...saleItem,
+                quantity: rem,
+                discount: newDisc,
+                lineTotal: newTotal,
+                lineProfit: newTotal - rem * saleItem.costPrice,
+              });
+            }
+          } else {
+            updatedItems.push(saleItem);
+          }
+        }
+
+        sale.items = updatedItems;
+        const newSub = updatedItems.reduce((acc, i) => acc + i.lineTotal, 0);
+        const newCost = updatedItems.reduce((acc, i) => acc + i.quantity * i.costPrice, 0);
+        sale.subtotal = newSub;
+        const taxable = Math.max(0, newSub - (sale.discount || 0));
+        const settings = this.getSettings();
+        const newTax = settings.taxEnabled && taxable > 0 ? Math.round((taxable * settings.taxPercentage) / 100) : 0;
+        sale.tax = newTax;
+        sale.grandTotal = Math.round(taxable + newTax);
+        sale.totalCost = newCost;
+        sale.grossProfit = sale.grandTotal - newCost;
+        sale.paidAmount = Math.max(0, sale.paidAmount - ret.totalRefundAmount);
+        sale.balanceAmount = Math.max(0, sale.grandTotal - sale.paidAmount);
+        sale.status = updatedItems.length === 0 || sale.grandTotal <= 0 ? 'returned_full' : 'returned_partial';
+
+        const retNote = `[Return #${ret.returnNumber}: -₨ ${ret.totalRefundAmount}]`;
+        sale.notes = sale.notes ? `${sale.notes} | ${retNote}` : retNote;
+
+        sales[sIdx] = sale;
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      this.setItem(STORAGE_KEYS.SALES, sales);
+    }
   }
 
   // --- SETTINGS ---
@@ -822,59 +924,124 @@ class DatabaseStore {
   }
 
   public processSaleReturn(returnData: Omit<SaleReturn, 'id' | 'createdAt'>): SaleReturn {
+    this.init();
     const products = this.getProducts();
     const sales = this.getSales();
-    const originalSale = sales.find((s) => s.id === returnData.saleId || s.invoiceNumber === returnData.invoiceNumber);
+    const uniformSets = this.getUniformSets();
 
-    // Restock returned items
+    // 1. Flexible Invoice & Sale Matching
+    const cleanInvNumber = (returnData.invoiceNumber || '').trim().toLowerCase();
+    const cleanDigits = cleanInvNumber.replace(/[^0-9]/g, '');
+
+    const originalSale = sales.find((s) => {
+      if (returnData.saleId && s.id === returnData.saleId) return true;
+      const sInv = (s.invoiceNumber || '').trim().toLowerCase();
+      if (sInv === cleanInvNumber) return true;
+      const sDigits = sInv.replace(/[^0-9]/g, '');
+      if (cleanDigits && sDigits === cleanDigits) return true;
+      return false;
+    });
+
+    // 2. Restock returned items (Products, Variants, and Uniform Kit Components)
     for (const item of returnData.items) {
-      const prod = products.find((p) => p.id === item.productId);
-      if (prod) {
-        if (item.variantId && prod.hasVariants && prod.variants) {
-          const v = prod.variants.find((va) => va.id === item.variantId);
-          if (v) {
-            const prev = v.currentStock;
-            v.currentStock = prev + item.quantity;
-            prod.currentStock = prod.variants.reduce((a, b) => a + b.currentStock, 0);
+      // Check if item is part of a uniform kit
+      const kit = uniformSets.find(
+        (s) => s.id === item.productId || s.id === (item as any).uniformSetId
+      );
+
+      if (kit) {
+        // Restock all components belonging to this kit
+        for (const comp of kit.components) {
+          const compProd = products.find((p) => p.id === comp.productId);
+          if (compProd) {
+            const addQty = comp.quantity * item.quantity;
+            if (comp.variantId && compProd.hasVariants && compProd.variants) {
+              const compVar = compProd.variants.find((v) => v.id === comp.variantId);
+              if (compVar) {
+                const prev = compVar.currentStock;
+                compVar.currentStock = prev + addQty;
+                compProd.currentStock = compProd.variants.reduce((a, b) => a + b.currentStock, 0);
+
+                this.recordStockMovement({
+                  productId: compProd.id,
+                  variantId: compVar.id,
+                  productName: `${compProd.name} (Restocked from Kit: ${kit.name})`,
+                  variantLabel: comp.variantLabel,
+                  type: 'sale_return',
+                  referenceId: returnData.returnNumber,
+                  previousQty: prev,
+                  changeQty: addQty,
+                  newQty: compVar.currentStock,
+                  reason: `Sale Return #${returnData.returnNumber}: Part of ${kit.name}`,
+                });
+              }
+            } else {
+              const prev = compProd.currentStock;
+              compProd.currentStock = prev + addQty;
+
+              this.recordStockMovement({
+                productId: compProd.id,
+                productName: `${compProd.name} (Restocked from Kit: ${kit.name})`,
+                type: 'sale_return',
+                referenceId: returnData.returnNumber,
+                previousQty: prev,
+                changeQty: addQty,
+                newQty: compProd.currentStock,
+                reason: `Sale Return #${returnData.returnNumber}: Part of ${kit.name}`,
+              });
+            }
+          }
+        }
+      } else {
+        // Regular product or variant
+        const prod = products.find((p) => p.id === item.productId);
+        if (prod) {
+          if (item.variantId && prod.hasVariants && prod.variants) {
+            const v = prod.variants.find((va) => va.id === item.variantId);
+            if (v) {
+              const prev = v.currentStock;
+              v.currentStock = prev + item.quantity;
+              prod.currentStock = prod.variants.reduce((a, b) => a + b.currentStock, 0);
+
+              this.recordStockMovement({
+                productId: prod.id,
+                variantId: v.id,
+                productName: prod.name,
+                type: 'sale_return',
+                referenceId: returnData.returnNumber,
+                previousQty: prev,
+                changeQty: item.quantity,
+                newQty: v.currentStock,
+                reason: `Sale Return #${returnData.returnNumber}: ${item.reason}`,
+              });
+            }
+          } else {
+            const prev = prod.currentStock;
+            prod.currentStock = prev + item.quantity;
 
             this.recordStockMovement({
               productId: prod.id,
-              variantId: v.id,
               productName: prod.name,
               type: 'sale_return',
               referenceId: returnData.returnNumber,
               previousQty: prev,
               changeQty: item.quantity,
-              newQty: v.currentStock,
+              newQty: prod.currentStock,
               reason: `Sale Return #${returnData.returnNumber}: ${item.reason}`,
             });
           }
-        } else {
-          const prev = prod.currentStock;
-          prod.currentStock = prev + item.quantity;
-
-          this.recordStockMovement({
-            productId: prod.id,
-            productName: prod.name,
-            type: 'sale_return',
-            referenceId: returnData.returnNumber,
-            previousQty: prev,
-            changeQty: item.quantity,
-            newQty: prod.currentStock,
-            reason: `Sale Return #${returnData.returnNumber}: ${item.reason}`,
-          });
         }
       }
     }
     this.setItem(STORAGE_KEYS.PRODUCTS, products);
 
-    // Financial adjustment: Refund Cash or Customer balance credit
+    // 3. Financial adjustment: Refund Cash or Customer balance credit
     if (returnData.refundMethod === 'cash') {
       this.recordCashTransaction({
         date: returnData.date,
         type: 'sale',
         amount: -returnData.totalRefundAmount, // cash outflow
-        description: `Cash Refund for Return #${returnData.returnNumber}`,
+        description: `Cash Refund for Return #${returnData.returnNumber} (Inv #${returnData.invoiceNumber})`,
         referenceId: returnData.returnNumber,
       });
     } else if (returnData.customerId) {
@@ -886,9 +1053,94 @@ class DatabaseStore {
       }
     }
 
-    // Update sale status
+    // 4. Update Original Sale Record & Bill Totals
     if (originalSale) {
-      originalSale.status = 'returned_partial';
+      // Record returned item history on the original sale
+      if (!originalSale.returnedItems) {
+        originalSale.returnedItems = [];
+      }
+      for (const retItem of returnData.items) {
+        originalSale.returnedItems.push({
+          saleItemId: retItem.saleItemId,
+          productId: retItem.productId,
+          variantId: retItem.variantId,
+          productName: retItem.productName,
+          quantity: retItem.quantity,
+          unitPrice: retItem.unitPrice,
+          costPrice: retItem.costPrice,
+          refundAmount: retItem.refundAmount,
+          reason: retItem.reason,
+        });
+      }
+
+      // Update remaining items on the bill
+      const updatedItems: SaleItem[] = [];
+
+      for (const saleItem of originalSale.items) {
+        const retItem = returnData.items.find(
+          (r) =>
+            (r.saleItemId && r.saleItemId === saleItem.id) ||
+            (r.productId === saleItem.productId &&
+              (r.variantId ? r.variantId === saleItem.variantId : !saleItem.variantId))
+        );
+
+        if (retItem) {
+          const remainingQty = saleItem.quantity - retItem.quantity;
+          if (remainingQty > 0) {
+            const perUnitDisc = saleItem.quantity > 0 ? saleItem.discount / saleItem.quantity : 0;
+            const newDisc = Math.round(perUnitDisc * remainingQty);
+            const newLineTotal = Math.round(remainingQty * saleItem.unitPrice - newDisc);
+            const newLineProfit = newLineTotal - remainingQty * saleItem.costPrice;
+
+            updatedItems.push({
+              ...saleItem,
+              quantity: remainingQty,
+              discount: newDisc,
+              lineTotal: newLineTotal,
+              lineProfit: newLineProfit,
+            });
+          }
+          // If remainingQty <= 0: item was fully returned!
+        } else {
+          updatedItems.push(saleItem);
+        }
+      }
+
+      originalSale.items = updatedItems;
+
+      // Recalculate bill totals
+      const newSubtotal = updatedItems.reduce((acc, i) => acc + i.lineTotal, 0);
+      const newTotalCost = updatedItems.reduce((acc, i) => acc + i.quantity * i.costPrice, 0);
+      originalSale.subtotal = newSubtotal;
+
+      const taxable = Math.max(0, newSubtotal - (originalSale.discount || 0));
+      const settings = this.getSettings();
+      const newTax =
+        settings.taxEnabled && taxable > 0 ? Math.round((taxable * settings.taxPercentage) / 100) : 0;
+      originalSale.tax = newTax;
+      originalSale.grandTotal = Math.round(taxable + newTax);
+      originalSale.totalCost = newTotalCost;
+      originalSale.grossProfit = originalSale.grandTotal - newTotalCost;
+
+      // Adjust paid amount and balance due
+      originalSale.paidAmount = Math.max(0, originalSale.paidAmount - returnData.totalRefundAmount);
+      originalSale.balanceAmount = Math.max(0, originalSale.grandTotal - originalSale.paidAmount);
+
+      // Status
+      if (updatedItems.length === 0 || originalSale.grandTotal <= 0) {
+        originalSale.status = 'returned_full';
+      } else {
+        originalSale.status = 'returned_partial';
+      }
+
+      // Append note
+      const returnNote = `[Return #${returnData.returnNumber}: -₨ ${returnData.totalRefundAmount}]`;
+      originalSale.notes = originalSale.notes ? `${originalSale.notes} | ${returnNote}` : returnNote;
+
+      const sIdx = sales.findIndex((s) => s.id === originalSale.id || s.invoiceNumber === originalSale.invoiceNumber);
+      if (sIdx >= 0) {
+        sales[sIdx] = originalSale;
+      }
       this.setItem(STORAGE_KEYS.SALES, sales);
     }
 
@@ -905,7 +1157,7 @@ class DatabaseStore {
     this.addAuditLog(
       `Sale Return #${saleReturn.returnNumber}`,
       'sale',
-      `Original Invoice: ${saleReturn.invoiceNumber}, Refund: ₨ ${saleReturn.totalRefundAmount}`
+      `Original Invoice: ${saleReturn.invoiceNumber}, Refund: ₨ ${saleReturn.totalRefundAmount}, Customer: ${saleReturn.customerName}`
     );
 
     return saleReturn;
@@ -1057,6 +1309,40 @@ class DatabaseStore {
       }
     }
     this.setItem(STORAGE_KEYS.PRODUCTS, products);
+
+    // Update original purchase bill if found
+    const purchases = this.getItem<Purchase[]>(STORAGE_KEYS.PURCHASES, []);
+    const pIdx = purchases.findIndex(
+      (p) => p.id === returnData.purchaseId || p.purchaseInvoiceNo === returnData.purchaseInvoiceNo
+    );
+    if (pIdx >= 0) {
+      const orig = purchases[pIdx];
+      const updatedItems: PurchaseItem[] = [];
+      for (const pItem of orig.items) {
+        const retItem = returnData.items.find(
+          (r) => r.productId === pItem.productId && (!r.variantId || r.variantId === pItem.variantId)
+        );
+        if (retItem) {
+          const rem = pItem.quantity - retItem.quantity;
+          if (rem > 0) {
+            updatedItems.push({
+              ...pItem,
+              quantity: rem,
+              total: rem * pItem.purchaseRate,
+            });
+          }
+        } else {
+          updatedItems.push(pItem);
+        }
+      }
+      orig.items = updatedItems;
+      orig.subtotal = updatedItems.reduce((acc, i) => acc + i.total, 0);
+      orig.grandTotal = Math.max(0, orig.subtotal - (orig.discount || 0));
+      orig.paidAmount = Math.max(0, orig.paidAmount - returnData.totalAmount);
+      orig.remainingAmount = Math.max(0, orig.grandTotal - orig.paidAmount);
+      purchases[pIdx] = orig;
+      this.setItem(STORAGE_KEYS.PURCHASES, purchases);
+    }
 
     // Reduce supplier balance
     if (returnData.supplierId) {

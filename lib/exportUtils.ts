@@ -97,7 +97,15 @@ export function generateInvoicePDF(sale: Sale, settings: ShopSettings) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(226, 232, 240);
-  doc.text('Official Customer Memo', 196, 21, { align: 'right' });
+  if (sale.status === 'returned_full') {
+    doc.setTextColor(239, 68, 68); // red
+    doc.text('** FULLY RETURNED & REFUNDED **', 196, 21, { align: 'right' });
+  } else if (sale.status === 'returned_partial') {
+    doc.setTextColor(245, 158, 11); // amber
+    doc.text('** PARTIALLY RETURNED **', 196, 21, { align: 'right' });
+  } else {
+    doc.text('Official Customer Memo', 196, 21, { align: 'right' });
+  }
 
   // 2. Metadata Card
   doc.setFillColor(248, 250, 252);

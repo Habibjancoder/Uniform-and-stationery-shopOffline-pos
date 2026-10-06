@@ -205,6 +205,18 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ sale, sett
                 <div className="text-[10px]">
                   Tel: {settings.phone} {settings.whatsapp && `| WA: ${settings.whatsapp}`}
                 </div>
+                {/* Return Status Banner */}
+                {sale.status === 'returned_full' && (
+                  <div className="text-center font-bold text-red-600 border border-black border-dashed py-1 my-1 text-[9px] uppercase">
+                    [ALL ITEMS FULLY RETURNED & REFUNDED - NET BILL: ₨ 0]
+                  </div>
+                )}
+                {sale.status === 'returned_partial' && (
+                  <div className="text-center font-bold text-amber-800 border border-black border-dashed py-1 my-1 text-[9px] uppercase">
+                    [PARTIALLY RETURNED - UPDATED NET BILL: ₨ {sale.grandTotal}]
+                  </div>
+                )}
+
                 <div className="text-[10px] font-bold mt-1 uppercase tracking-wider text-black">
                   RETAIL CASH MEMO
                 </div>
@@ -244,26 +256,49 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ sale, sett
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dotted divide-slate-300">
-                  {sale.items.map((item, idx) => (
-                    <tr key={idx} className="align-top">
-                      <td className="py-1 pr-1">
-                        <div className="font-bold leading-snug">{item.productName}</div>
-                        {item.variantDetails && (
-                          <div className="text-[9px] text-slate-700">{item.variantDetails}</div>
-                        )}
-                        {item.discount > 0 && settings.showDiscountOnInvoice && (
-                          <div className="text-[9px] text-slate-600">
-                            Disc: -{formatCurrency(item.discount)}
-                          </div>
-                        )}
+                  {sale.items.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-4 text-center text-red-600 font-bold uppercase text-[9px]">
+                        [All items in this invoice have been returned & refunded]
                       </td>
-                      <td className="text-center py-1 font-bold">{item.quantity}</td>
-                      <td className="text-right py-1">{item.unitPrice}</td>
-                      <td className="text-right py-1 font-bold">{item.lineTotal}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    sale.items.map((item, idx) => (
+                      <tr key={idx} className="align-top">
+                        <td className="py-1 pr-1">
+                          <div className="font-bold leading-snug">{item.productName}</div>
+                          {item.variantDetails && (
+                            <div className="text-[9px] text-slate-700">{item.variantDetails}</div>
+                          )}
+                          {item.discount > 0 && settings.showDiscountOnInvoice && (
+                            <div className="text-[9px] text-slate-600">
+                              Disc: -{formatCurrency(item.discount)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="text-center py-1 font-bold">{item.quantity}</td>
+                        <td className="text-right py-1">{item.unitPrice}</td>
+                        <td className="text-right py-1 font-bold">{item.lineTotal}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+
+              {/* Returned Items Deduction if applicable */}
+              {sale.returnedItems && sale.returnedItems.length > 0 && (
+                <div className="border-t border-black border-dashed pt-1 pb-1 space-y-0.5 text-[9px]">
+                  <div className="font-bold text-red-600 uppercase">Returned Items / Refund Deductions:</div>
+                  {sale.returnedItems.map((ri, rIdx) => (
+                    <div key={rIdx} className="flex justify-between">
+                      <span className="truncate max-w-[48mm]">
+                        ↩ {ri.productName} (x{ri.quantity})
+                      </span>
+                      <span className="font-bold text-red-700 font-mono">-₨ {ri.refundAmount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Totals */}
               <div className="border-t border-black border-dashed pt-2 space-y-1 text-[11px]">
@@ -333,7 +368,19 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ sale, sett
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-black text-emerald-800">RETAIL SALE INVOICE</div>
+                  <div className="text-lg font-black text-emerald-800 flex items-center justify-end gap-2">
+                    <span>RETAIL SALE INVOICE</span>
+                    {sale.status === 'returned_full' && (
+                      <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-bold border border-red-300">
+                        FULLY RETURNED
+                      </span>
+                    )}
+                    {sale.status === 'returned_partial' && (
+                      <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+                        PARTIALLY RETURNED
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs font-mono font-bold text-slate-800 mt-1">
                     #{sale.invoiceNumber}
                   </div>
@@ -374,32 +421,78 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ sale, sett
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {sale.items.map((item, idx) => (
-                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                      <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
-                      <td className="py-2 px-3">
-                        <div className="font-bold text-slate-900">{item.productName}</div>
-                        {item.variantDetails && (
-                          <div className="text-[11px] text-emerald-800 font-medium">{item.variantDetails}</div>
-                        )}
-                        <div className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</div>
-                      </td>
-                      <td className="py-2 px-3 text-center font-bold">
-                        {item.quantity} {item.unit || ''}
-                      </td>
-                      <td className="py-2 px-3 text-right font-medium">
-                        {formatCurrency(item.unitPrice)}
-                      </td>
-                      <td className="py-2 px-3 text-right text-slate-600">
-                        {item.discount > 0 ? formatCurrency(item.discount) : '-'}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-slate-900">
-                        {formatCurrency(item.lineTotal)}
+                  {sale.items.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-4 text-center font-bold text-red-600 uppercase text-xs">
+                        [All items in this invoice have been returned & refunded]
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    sale.items.map((item, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                        <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
+                        <td className="py-2 px-3">
+                          <div className="font-bold text-slate-900">{item.productName}</div>
+                          {item.variantDetails && (
+                            <div className="text-[11px] text-emerald-800 font-medium">{item.variantDetails}</div>
+                          )}
+                          <div className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</div>
+                        </td>
+                        <td className="py-2 px-3 text-center font-bold">
+                          {item.quantity} {item.unit || ''}
+                        </td>
+                        <td className="py-2 px-3 text-right font-medium">
+                          {formatCurrency(item.unitPrice)}
+                        </td>
+                        <td className="py-2 px-3 text-right text-slate-600">
+                          {item.discount > 0 ? formatCurrency(item.discount) : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-slate-900">
+                          {formatCurrency(item.lineTotal)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
+
+              {/* Returned Items Table on A4 */}
+              {sale.returnedItems && sale.returnedItems.length > 0 && (
+                <div className="mb-4 border border-rose-200 rounded-lg overflow-hidden">
+                  <div className="bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-900 flex justify-between">
+                    <span>Returned Items & Refund Deductions</span>
+                    <span className="text-[11px] text-rose-700">Official Return Audit</span>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead className="bg-rose-100/60 font-semibold text-rose-800">
+                      <tr>
+                        <th className="py-1 px-3 text-left">Item Description</th>
+                        <th className="py-1 px-3 text-center">Returned Qty</th>
+                        <th className="py-1 px-3 text-right">Refund Amount</th>
+                        <th className="py-1 px-3 text-right">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-100">
+                      {sale.returnedItems.map((ri, rIdx) => (
+                        <tr key={rIdx} className="bg-white">
+                          <td className="py-1.5 px-3 font-semibold text-slate-800">
+                            ↩ {ri.productName}
+                          </td>
+                          <td className="py-1.5 px-3 text-center font-bold text-rose-700">
+                            x{ri.quantity}
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-bold text-rose-700 font-mono">
+                            -₨ {ri.refundAmount}
+                          </td>
+                          <td className="py-1.5 px-3 text-right text-slate-500 text-[11px]">
+                            {ri.reason || 'Customer return'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {/* Summary and Signatures */}
               <div className="flex justify-between items-start pt-2">
