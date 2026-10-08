@@ -15,16 +15,24 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
+  HardDrive,
+  Terminal,
+  FileText,
 } from 'lucide-react';
 import { db } from '@/lib/database';
 import { Language, t } from '@/lib/i18n';
 import { BusinessType, ShopSettings } from '@/types';
+import {
+  downloadOfflineBatchLauncher,
+  downloadUrduGuideFile,
+} from '@/lib/backupUtils';
 
 interface SettingsViewProps {
   settings: ShopSettings;
   lang: Language;
   onRefreshSettings: () => void;
   onOpenWizard: () => void;
+  onOpenUsbBackup?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -32,6 +40,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   lang,
   onRefreshSettings,
   onOpenWizard,
+  onOpenUsbBackup,
 }) => {
   const [shopName, setShopName] = useState(settings.shopName);
   const [ownerName, setOwnerName] = useState(settings.ownerName);
@@ -339,11 +348,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </form>
 
-        {/* Database Safety, Backup & Sample Data Controls */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4 max-w-4xl">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm border-b pb-3">
-            <Database className="w-4 h-4 text-emerald-600" />
-            <span>Local Database Backup, Restore & Demo Reset</span>
+        {/* Database Safety, USB Backup & Offline Controls */}
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-5 max-w-4xl">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+              <HardDrive className="w-4 h-4 text-emerald-600" />
+              <span>USB Flash Drive Backup, Data Recovery & Offline Setup</span>
+            </div>
+            {onOpenUsbBackup && (
+              <button
+                type="button"
+                onClick={onOpenUsbBackup}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              >
+                <HardDrive className="w-3.5 h-3.5" />
+                <span>Open USB Backup Center</span>
+              </button>
+            )}
+          </div>
+
+          {/* USB & Direct Offline Run Ribbon */}
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <div className="font-extrabold flex items-center gap-2 text-emerald-400">
+                <Terminal className="w-4 h-4" />
+                <span>100% Offline Windows Execution (No Internet & No API Key Needed)</span>
+              </div>
+              <p className="text-slate-300 text-[11px]">
+                Aap is app ko apne computer par bina internet direct double-click karke chala sakte hain.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={downloadOfflineBatchLauncher}
+                className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 rounded-lg font-bold text-xs transition flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download RUN_OFFLINE.bat</span>
+              </button>
+              <button
+                type="button"
+                onClick={downloadUrduGuideFile}
+                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-xs transition flex items-center gap-1.5"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Urdu Guide (.txt)</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -351,40 +403,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
               <div className="font-bold text-slate-900 flex items-center gap-2">
                 <FolderArchive className="w-4 h-4 text-emerald-600" />
-                <span>Download Instant Full Database Backup</span>
+                <span>Full Database Backup (.json)</span>
               </div>
               <p className="text-slate-500 text-[11px] leading-relaxed">
-                Generates a complete standalone JSON/SQLite snapshot containing all products, uniform sizes, customers, sales history, and audit ledger.
+                Creates a complete standalone JSON snapshot containing all products, uniform sizes, customers, sales history, and audit ledger for saving to USB flash drive.
               </p>
-              <button
-                type="button"
-                onClick={handleDownloadBackup}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Full Database Backup</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {onOpenUsbBackup ? (
+                  <button
+                    type="button"
+                    onClick={onOpenUsbBackup}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <HardDrive className="w-4 h-4" />
+                    <span>Save to USB Flash Drive</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleDownloadBackup}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Backup File</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Restore from file */}
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
               <div className="font-bold text-slate-900 flex items-center gap-2">
                 <Upload className="w-4 h-4 text-blue-600" />
-                <span>Restore Database from File</span>
+                <span>Restore Database from File / USB</span>
               </div>
               <p className="text-slate-500 text-[11px] leading-relaxed">
                 Restore previously backed up database file on any Windows computer running this offline ERP.
               </p>
-              <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs shadow-xs transition cursor-pointer">
-                <Upload className="w-4 h-4" />
-                <span>Select Backup File to Restore</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleRestoreFile}
-                  className="hidden"
-                />
-              </label>
+              {onOpenUsbBackup ? (
+                <button
+                  type="button"
+                  onClick={onOpenUsbBackup}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Open Restore / Recovery Tool</span>
+                </button>
+              ) : (
+                <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs shadow-xs transition cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  <span>Select Backup File to Restore</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleRestoreFile}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
           </div>
 

@@ -153,16 +153,16 @@ export const ProductListView: React.FC<ProductListViewProps> = ({
       </div>
 
       {/* Filter and Search Ribbon */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
+      <div className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div className="flex items-center gap-3 flex-1 max-w-3xl">
           <div className="relative w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by Name, SKU, Barcode, School, or Size..."
-              className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+              placeholder="Search by Product Name, Book Title, SKU, Barcode, School, or Uniform Size..."
+              className="w-full pl-12 pr-4 py-3 h-12 border-2 border-slate-300 rounded-xl text-sm sm:text-base font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 bg-white text-slate-900 shadow-xs placeholder:text-slate-400"
             />
           </div>
         </div>

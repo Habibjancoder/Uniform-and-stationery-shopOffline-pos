@@ -175,18 +175,18 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-800 text-sm">Purchased Items & Inventory Receiving:</span>
-              <div className="relative w-72">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <div className="relative w-96">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
                   placeholder="Search products to add to purchase..."
-                  className="w-full pl-8 pr-3 py-1.5 border rounded-lg bg-slate-50"
+                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl bg-white text-xs sm:text-sm font-medium focus:ring-2 focus:ring-emerald-500 shadow-xs"
                 />
 
                 {itemSearch.trim() && (
-                  <div className="absolute top-10 left-0 right-0 z-20 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                  <div className="absolute top-full mt-1.5 left-0 right-0 z-20 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
                     {availableItems.map((p) => {
                       if (p.hasVariants && p.variants) {
                         return p.variants.map((v) => (

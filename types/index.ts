@@ -54,6 +54,9 @@ export interface ShopSettings {
   taxEnabled: boolean;
   taxPercentage: number;
   backupLocation: string;
+  autoBackupEnabled?: boolean;
+  autoBackupInterval?: 'daily' | 'hourly' | 'on_sale' | 'on_shift_close';
+  lastAutoBackupTime?: string;
   preventNegativeStock: boolean;
   language: 'en' | 'ur';
   theme: 'light' | 'dark';

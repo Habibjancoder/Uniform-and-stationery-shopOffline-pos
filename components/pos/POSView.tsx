@@ -821,21 +821,21 @@ export const POSView: React.FC<POSViewProps> = ({
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] bg-slate-100 overflow-hidden select-none">
       {/* Top POS Action Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shadow-xs gap-3">
+      <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs gap-4">
         {/* Search & Scanner Input with Quick Tab Jump Button */}
-        <div className="flex items-center gap-2 flex-1 max-w-2xl relative">
+        <div className="flex items-center gap-2 flex-1 max-w-5xl relative">
           <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-6 h-6 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Scan Barcode or Search (Name, School, Size, Bag) [F2] • ↓/↑ to navigate • Enter to add • Tab to Qty"
-              className="w-full pl-9 pr-32 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 font-medium"
+              placeholder="Scan Barcode or Search (Name, School, Size, Bag...) [Press F2]"
+              className="w-full pl-13 pr-40 py-3 sm:py-3.5 h-12 sm:h-14 border-2 border-slate-300 rounded-xl text-base sm:text-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white font-bold text-slate-900 shadow-sm placeholder:text-slate-400 placeholder:font-normal"
             />
-            <div className="absolute right-1 top-1 flex items-center gap-1">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {cartItems.length > 0 && (
                 <button
                   type="button"
@@ -844,7 +844,7 @@ export const POSView: React.FC<POSViewProps> = ({
                     el?.focus();
                     el?.select();
                   }}
-                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold border border-slate-300 transition flex items-center gap-0.5"
+                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center gap-1"
                   title="Shift Keyboard to Cart Quantity & Unit [Tab]"
                 >
                   <span>Tab ⇥</span>
@@ -852,7 +852,7 @@ export const POSView: React.FC<POSViewProps> = ({
               )}
               <button
                 type="submit"
-                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[11px] font-bold shadow-xs transition"
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer"
               >
                 Add Item
               </button>
@@ -861,11 +861,11 @@ export const POSView: React.FC<POSViewProps> = ({
 
           {/* Search Dropdown Results with Keyboard Arrow Navigation */}
           {searchResults.length > 0 && (
-            <div className="absolute top-10 left-0 right-0 z-40 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-84 overflow-y-auto">
-              <div className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold flex justify-between items-center">
+            <div className="absolute top-full mt-2 left-0 right-0 z-40 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden max-h-96 overflow-y-auto">
+              <div className="px-4 py-2 bg-slate-900 text-white text-xs font-bold flex justify-between items-center">
                 <span>Matching Items ({searchResults.length})</span>
-                <span className="text-[10px] text-emerald-400 font-mono">
-                  Use [↓] [↑] to move • Press [Enter ↵] to add
+                <span className="text-[11px] text-emerald-400 font-mono">
+                  Use [↓] [↑] to navigate • Press [Enter ↵] to add
                 </span>
               </div>
               {searchResults.map((res, idx) => {
@@ -880,30 +880,30 @@ export const POSView: React.FC<POSViewProps> = ({
                       setSelectedSearchIndex(0);
                     }}
                     onMouseEnter={() => setSelectedSearchIndex(idx)}
-                    className={`px-3 py-2 border-b border-slate-100 cursor-pointer flex items-center justify-between transition ${
+                    className={`px-4 py-2.5 border-b border-slate-100 cursor-pointer flex items-center justify-between transition ${
                       isSelected
                         ? 'bg-emerald-600 text-white shadow-inner font-semibold'
                         : 'hover:bg-emerald-50 text-slate-900'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold flex items-center gap-1.5">
+                      <div className="text-sm font-bold flex items-center gap-2">
                         <span>{res.displayName}</span>
                         {isSelected && (
-                          <span className="text-[9px] bg-white text-emerald-800 font-bold px-1.5 py-0.2 rounded-sm shadow-xs uppercase tracking-wide">
+                          <span className="text-[10px] bg-white text-emerald-800 font-bold px-2 py-0.5 rounded shadow-xs uppercase tracking-wide">
                             Enter ↵
                           </span>
                         )}
                       </div>
                       <div
-                        className={`text-[11px] ${
+                        className={`text-xs ${
                           isSelected ? 'text-emerald-100' : 'text-slate-500'
                         }`}
                       >
                         {res.displayDetails}
                       </div>
                       <div
-                        className={`text-[10px] font-mono ${
+                        className={`text-[11px] font-mono ${
                           isSelected ? 'text-emerald-200' : 'text-slate-400'
                         }`}
                       >
@@ -911,9 +911,9 @@ export const POSView: React.FC<POSViewProps> = ({
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-bold">{formatCurrency(res.price)}</div>
+                      <div className="text-sm font-black">{formatCurrency(res.price)}</div>
                       <div
-                        className={`text-[10px] font-semibold ${
+                        className={`text-xs font-semibold ${
                           isSelected
                             ? 'text-white'
                             : res.stock <= 0
@@ -934,7 +934,7 @@ export const POSView: React.FC<POSViewProps> = ({
         </div>
 
         {/* Customer Selector & Quick Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Customer Selector */}
           <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
             <span className="text-[11px] font-semibold text-slate-600">Customer:</span>

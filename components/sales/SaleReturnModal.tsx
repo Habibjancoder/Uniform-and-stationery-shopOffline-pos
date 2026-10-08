@@ -393,9 +393,9 @@ export const SaleReturnModal: React.FC<SaleReturnModalProps> = ({
           ) : (
             <>
               {/* Search Bar */}
-              <form onSubmit={handleSearchSubmit} className="flex gap-2">
+              <form onSubmit={handleSearchSubmit} className="flex gap-2.5">
                 <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={invoiceQuery}
@@ -404,12 +404,12 @@ export const SaleReturnModal: React.FC<SaleReturnModalProps> = ({
                       if (!e.target.value.trim()) setSelectedSale(null);
                     }}
                     placeholder="Enter Invoice # (e.g. 1001 or INV-1001), Customer Name, or Phone..."
-                    className="w-full pl-9 pr-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-500 font-mono text-xs bg-slate-50 border-slate-300"
+                    className="w-full pl-11 pr-4 py-2.5 sm:py-3 h-11 sm:h-12 border-2 rounded-xl focus:ring-2 focus:ring-rose-500 font-mono text-sm sm:text-base font-semibold bg-white border-slate-300 text-slate-900 shadow-xs placeholder:text-slate-400 placeholder:font-normal"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition"
+                  className="px-6 py-2.5 sm:py-3 h-11 sm:h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition flex items-center justify-center shrink-0 cursor-pointer"
                 >
                   Lookup Invoice
                 </button>

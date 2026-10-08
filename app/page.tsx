@@ -1,33 +1,49 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Header } from '@/components/layout/Header';
-import { ShortcutsModal } from '@/components/layout/ShortcutsModal';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { DashboardView } from '@/components/dashboard/DashboardView';
 import { POSView } from '@/components/pos/POSView';
-import { ProductListView } from '@/components/inventory/ProductListView';
-import { UniformSetView } from '@/components/inventory/UniformSetView';
-import { StockAdjustmentModal } from '@/components/stock/StockAdjustmentModal';
-import { StockLedgerView } from '@/components/stock/StockLedgerView';
-import { PurchaseListView } from '@/components/purchases/PurchaseListView';
-import { SaleHistoryView } from '@/components/sales/SaleHistoryView';
-import { SaleReturnModal } from '@/components/sales/SaleReturnModal';
-import { CustomerListView } from '@/components/customers/CustomerListView';
-import { SchoolManagementView } from '@/components/customers/SchoolManagementView';
-import { SupplierListView } from '@/components/suppliers/SupplierListView';
-import { ExpenseListView } from '@/components/expenses/ExpenseListView';
-import { CashRegisterView } from '@/components/cash/CashRegisterView';
-import { ReportsView } from '@/components/reports/ReportsView';
-import { UserManagementView } from '@/components/users/UserManagementView';
-import { AuditLogView } from '@/components/users/AuditLogView';
-import { SettingsView } from '@/components/settings/SettingsView';
-import { SetupWizard } from '@/components/wizard/SetupWizard';
-import { LoginModal } from '@/components/auth/LoginModal';
-import { AdminAuthModal } from '@/components/auth/AdminAuthModal';
 import { db } from '@/lib/database';
 import { Language } from '@/lib/i18n';
 import { Product, ProductVariant, ShopSettings, User } from '@/types';
+
+// Tab loading placeholder
+function TabLoading() {
+  return (
+    <div className="flex-1 flex items-center justify-center bg-slate-50 min-h-[400px]">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-7 h-7 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-semibold text-slate-500">Loading module...</span>
+      </div>
+    </div>
+  );
+}
+
+// Code-split heavy views and modals for optimal bundle size and zero chunk timeout
+const DashboardView = dynamic(() => import('@/components/dashboard/DashboardView').then(m => m.DashboardView), { loading: () => <TabLoading /> });
+const ProductListView = dynamic(() => import('@/components/inventory/ProductListView').then(m => m.ProductListView), { loading: () => <TabLoading /> });
+const UniformSetView = dynamic(() => import('@/components/inventory/UniformSetView').then(m => m.UniformSetView), { loading: () => <TabLoading /> });
+const StockAdjustmentModal = dynamic(() => import('@/components/stock/StockAdjustmentModal').then(m => m.StockAdjustmentModal));
+const StockLedgerView = dynamic(() => import('@/components/stock/StockLedgerView').then(m => m.StockLedgerView), { loading: () => <TabLoading /> });
+const PurchaseListView = dynamic(() => import('@/components/purchases/PurchaseListView').then(m => m.PurchaseListView), { loading: () => <TabLoading /> });
+const SaleHistoryView = dynamic(() => import('@/components/sales/SaleHistoryView').then(m => m.SaleHistoryView), { loading: () => <TabLoading /> });
+const SaleReturnModal = dynamic(() => import('@/components/sales/SaleReturnModal').then(m => m.SaleReturnModal));
+const CustomerListView = dynamic(() => import('@/components/customers/CustomerListView').then(m => m.CustomerListView), { loading: () => <TabLoading /> });
+const SchoolManagementView = dynamic(() => import('@/components/customers/SchoolManagementView').then(m => m.SchoolManagementView), { loading: () => <TabLoading /> });
+const SupplierListView = dynamic(() => import('@/components/suppliers/SupplierListView').then(m => m.SupplierListView), { loading: () => <TabLoading /> });
+const ExpenseListView = dynamic(() => import('@/components/expenses/ExpenseListView').then(m => m.ExpenseListView), { loading: () => <TabLoading /> });
+const CashRegisterView = dynamic(() => import('@/components/cash/CashRegisterView').then(m => m.CashRegisterView), { loading: () => <TabLoading /> });
+const ReportsView = dynamic(() => import('@/components/reports/ReportsView').then(m => m.ReportsView), { loading: () => <TabLoading /> });
+const UserManagementView = dynamic(() => import('@/components/users/UserManagementView').then(m => m.UserManagementView), { loading: () => <TabLoading /> });
+const AuditLogView = dynamic(() => import('@/components/users/AuditLogView').then(m => m.AuditLogView), { loading: () => <TabLoading /> });
+const SettingsView = dynamic(() => import('@/components/settings/SettingsView').then(m => m.SettingsView), { loading: () => <TabLoading /> });
+const UsbBackupModal = dynamic(() => import('@/components/settings/UsbBackupModal').then(m => m.UsbBackupModal));
+const SetupWizard = dynamic(() => import('@/components/wizard/SetupWizard').then(m => m.SetupWizard));
+const LoginModal = dynamic(() => import('@/components/auth/LoginModal').then(m => m.LoginModal));
+const AdminAuthModal = dynamic(() => import('@/components/auth/AdminAuthModal').then(m => m.AdminAuthModal));
+const ShortcutsModal = dynamic(() => import('@/components/layout/ShortcutsModal').then(m => m.ShortcutsModal));
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -40,6 +56,7 @@ export default function Home() {
   const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isUsbBackupOpen, setIsUsbBackupOpen] = useState<boolean>(false);
   const [adminAuthPendingTab, setAdminAuthPendingTab] = useState<string | null>(null);
 
   const [stockAdjustProduct, setStockAdjustProduct] = useState<Product | null>(null);
@@ -122,6 +139,7 @@ export default function Home() {
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
           onNavigate={handleTabChange}
           onOpenLoginModal={() => setIsLoginModalOpen(true)}
+          onOpenUsbBackup={() => setIsUsbBackupOpen(true)}
         />
 
         {/* View Router */}
@@ -224,6 +242,7 @@ export default function Home() {
               lang={lang}
               onRefreshSettings={refreshAll}
               onOpenWizard={() => setIsWizardOpen(true)}
+              onOpenUsbBackup={() => setIsUsbBackupOpen(true)}
             />
           )}
         </main>
@@ -283,6 +302,14 @@ export default function Home() {
           }}
         />
       )}
+
+      {/* USB FLASH DRIVE BACKUP & RECOVERY MODAL */}
+      <UsbBackupModal
+        settings={settings}
+        isOpen={isUsbBackupOpen}
+        onClose={() => setIsUsbBackupOpen(false)}
+        onRefreshAll={refreshAll}
+      />
     </div>
   );
 }

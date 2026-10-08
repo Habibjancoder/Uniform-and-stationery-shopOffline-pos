@@ -5,6 +5,7 @@ import {
   Bell,
   Clock,
   Database,
+  HardDrive,
   Keyboard,
   Maximize2,
   Minimize2,
@@ -27,6 +28,7 @@ interface HeaderProps {
   onOpenShortcuts: () => void;
   onNavigate: (tab: string) => void;
   onOpenLoginModal?: () => void;
+  onOpenUsbBackup?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShortcuts,
   onNavigate,
   onOpenLoginModal,
+  onOpenUsbBackup,
 }) => {
   const [time, setTime] = useState<string>('');
   const [activeShift, setActiveShift] = useState<CashRegisterShift | undefined>(undefined);
@@ -95,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
           <Clock className="w-3.5 h-3.5 text-slate-500" />
-          <span>{time || 'Loading time...'}</span>
+          <span suppressHydrationWarning>{time || 'Loading time...'}</span>
         </div>
 
         {/* Database Status */}
@@ -129,6 +132,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-[10px] text-slate-400 font-normal pl-1 border-l border-slate-300">
               Switch
             </span>
+          </button>
+        )}
+
+        {/* USB Backup & Data Recovery Center Button */}
+        {onOpenUsbBackup && (
+          <button
+            onClick={onOpenUsbBackup}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition border bg-slate-900 text-white hover:bg-slate-800 border-slate-700 shadow-xs"
+            title="USB Flash Drive Backup, Data Recovery & 1-Click Offline Launcher"
+          >
+            <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden md:inline">USB Backup</span>
           </button>
         )}
 

@@ -1665,7 +1665,7 @@ class DatabaseStore {
 
     const jsonData = JSON.stringify(data, null, 2);
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const fileName = `KitabGhar_Backup_${dateStr}.json`;
+    const fileName = `KitabGhar_USB_Backup_${dateStr}.json`;
 
     // Save record in backups list
     const backups = this.getBackups();
@@ -1679,39 +1679,134 @@ class DatabaseStore {
       totalCustomers: data.customers.length,
     };
     backups.unshift(record);
+    // Keep last 30 backup records in index
+    if (backups.length > 30) backups.pop();
     this.setItem(STORAGE_KEYS.BACKUPS, backups);
 
     this.addAuditLog('Database Backup Created', 'system', `File: ${fileName}`);
     return { fileName, jsonData };
   }
 
-  public restoreFromBackup(jsonString: string): boolean {
+  public triggerAutoBackup(reason: string = 'auto'): { fileName: string; jsonData: string } | null {
+    const settings = this.getSettings();
+    if (settings.autoBackupEnabled === false) return null;
+
+    const res = this.createFullBackup();
+    this.updateSettings({ lastAutoBackupTime: new Date().toISOString() });
+    return res;
+  }
+
+  public getBackupSummary(jsonString: string): {
+    valid: boolean;
+    version?: string;
+    shopName?: string;
+    exportedAt?: string;
+    totalProducts: number;
+    totalSales: number;
+    totalCustomers: number;
+    totalSuppliers: number;
+    totalPurchases: number;
+    totalExpenses: number;
+    error?: string;
+  } {
     try {
       const data = JSON.parse(jsonString);
-      if (!data.settings || !data.products) {
-        throw new Error('Invalid backup file format: Missing settings or products.');
+      if (!data.settings || !Array.isArray(data.products)) {
+        return {
+          valid: false,
+          totalProducts: 0,
+          totalSales: 0,
+          totalCustomers: 0,
+          totalSuppliers: 0,
+          totalPurchases: 0,
+          totalExpenses: 0,
+          error: 'File does not contain valid KitabGhar ERP data structure.',
+        };
+      }
+      return {
+        valid: true,
+        version: data.version || '1.0.0',
+        shopName: data.settings?.shopName || 'KitabGhar Store',
+        exportedAt: data.exportedAt || new Date().toISOString(),
+        totalProducts: data.products?.length || 0,
+        totalSales: data.sales?.length || 0,
+        totalCustomers: data.customers?.length || 0,
+        totalSuppliers: data.suppliers?.length || 0,
+        totalPurchases: data.purchases?.length || 0,
+        totalExpenses: data.expenses?.length || 0,
+      };
+    } catch (err: any) {
+      return {
+        valid: false,
+        totalProducts: 0,
+        totalSales: 0,
+        totalCustomers: 0,
+        totalSuppliers: 0,
+        totalPurchases: 0,
+        totalExpenses: 0,
+        error: 'Invalid JSON format: ' + err.message,
+      };
+    }
+  }
+
+  public restoreFromBackup(jsonString: string, mode: 'replace' | 'merge' = 'replace'): { success: boolean; message: string } {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data.settings || !Array.isArray(data.products)) {
+        throw new Error('Invalid backup file format: Missing settings or products array.');
       }
 
-      this.setItem(STORAGE_KEYS.SETTINGS, data.settings);
-      if (data.users) this.setItem(STORAGE_KEYS.USERS, data.users);
-      if (data.categories) this.setItem(STORAGE_KEYS.CATEGORIES, data.categories);
-      if (data.schools) this.setItem(STORAGE_KEYS.SCHOOLS, data.schools);
-      if (data.products) this.setItem(STORAGE_KEYS.PRODUCTS, data.products);
-      if (data.uniformSets) this.setItem(STORAGE_KEYS.UNIFORM_SETS, data.uniformSets);
-      if (data.customers) this.setItem(STORAGE_KEYS.CUSTOMERS, data.customers);
-      if (data.suppliers) this.setItem(STORAGE_KEYS.SUPPLIERS, data.suppliers);
-      if (data.sales) this.setItem(STORAGE_KEYS.SALES, data.sales);
-      if (data.saleReturns) this.setItem(STORAGE_KEYS.SALE_RETURNS, data.saleReturns);
-      if (data.purchases) this.setItem(STORAGE_KEYS.PURCHASES, data.purchases);
-      if (data.purchaseReturns) this.setItem(STORAGE_KEYS.PURCHASE_RETURNS, data.purchaseReturns);
-      if (data.expenses) this.setItem(STORAGE_KEYS.EXPENSES, data.expenses);
-      if (data.expenseCategories) this.setItem(STORAGE_KEYS.EXPENSE_CATEGORIES, data.expenseCategories);
-      if (data.cashTransactions) this.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, data.cashTransactions);
-      if (data.cashShifts) this.setItem(STORAGE_KEYS.CASH_SHIFTS, data.cashShifts);
-      if (data.stockMovements) this.setItem(STORAGE_KEYS.STOCK_MOVEMENTS, data.stockMovements);
+      if (mode === 'replace') {
+        this.setItem(STORAGE_KEYS.SETTINGS, data.settings);
+        if (data.users) this.setItem(STORAGE_KEYS.USERS, data.users);
+        if (data.categories) this.setItem(STORAGE_KEYS.CATEGORIES, data.categories);
+        if (data.schools) this.setItem(STORAGE_KEYS.SCHOOLS, data.schools);
+        if (data.products) this.setItem(STORAGE_KEYS.PRODUCTS, data.products);
+        if (data.uniformSets) this.setItem(STORAGE_KEYS.UNIFORM_SETS, data.uniformSets);
+        if (data.customers) this.setItem(STORAGE_KEYS.CUSTOMERS, data.customers);
+        if (data.suppliers) this.setItem(STORAGE_KEYS.SUPPLIERS, data.suppliers);
+        if (data.sales) this.setItem(STORAGE_KEYS.SALES, data.sales);
+        if (data.saleReturns) this.setItem(STORAGE_KEYS.SALE_RETURNS, data.saleReturns);
+        if (data.purchases) this.setItem(STORAGE_KEYS.PURCHASES, data.purchases);
+        if (data.purchaseReturns) this.setItem(STORAGE_KEYS.PURCHASE_RETURNS, data.purchaseReturns);
+        if (data.expenses) this.setItem(STORAGE_KEYS.EXPENSES, data.expenses);
+        if (data.expenseCategories) this.setItem(STORAGE_KEYS.EXPENSE_CATEGORIES, data.expenseCategories);
+        if (data.cashTransactions) this.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, data.cashTransactions);
+        if (data.cashShifts) this.setItem(STORAGE_KEYS.CASH_SHIFTS, data.cashShifts);
+        if (data.stockMovements) this.setItem(STORAGE_KEYS.STOCK_MOVEMENTS, data.stockMovements);
 
-      this.addAuditLog('Database Restored from Backup', 'system', `Restored ${data.products.length} products and ${data.sales?.length || 0} sales.`);
-      return true;
+        this.addAuditLog('Database Restored (Full Replace)', 'system', `Restored ${data.products.length} products and ${data.sales?.length || 0} sales from backup file.`);
+        return {
+          success: true,
+          message: `Successfully restored ${data.products.length} products and ${data.sales?.length || 0} sales.`,
+        };
+      } else {
+        // Merge mode - union without duplicates
+        const mergeById = <T extends { id: string }>(currentList: T[], newList: T[] = []): T[] => {
+          const map = new Map<string, T>();
+          for (const item of currentList) map.set(item.id, item);
+          for (const item of newList) {
+            if (!map.has(item.id)) map.set(item.id, item);
+          }
+          return Array.from(map.values());
+        };
+
+        if (data.categories) this.setItem(STORAGE_KEYS.CATEGORIES, mergeById(this.getCategories(), data.categories));
+        if (data.schools) this.setItem(STORAGE_KEYS.SCHOOLS, mergeById(this.getSchools(), data.schools));
+        if (data.products) this.setItem(STORAGE_KEYS.PRODUCTS, mergeById(this.getProducts(), data.products));
+        if (data.uniformSets) this.setItem(STORAGE_KEYS.UNIFORM_SETS, mergeById(this.getUniformSets(), data.uniformSets));
+        if (data.customers) this.setItem(STORAGE_KEYS.CUSTOMERS, mergeById(this.getCustomers(), data.customers));
+        if (data.suppliers) this.setItem(STORAGE_KEYS.SUPPLIERS, mergeById(this.getSuppliers(), data.suppliers));
+        if (data.sales) this.setItem(STORAGE_KEYS.SALES, mergeById(this.getSales(), data.sales));
+        if (data.purchases) this.setItem(STORAGE_KEYS.PURCHASES, mergeById(this.getPurchases(), data.purchases));
+        if (data.expenses) this.setItem(STORAGE_KEYS.EXPENSES, mergeById(this.getExpenses(), data.expenses));
+
+        this.addAuditLog('Database Restored (Safe Merge)', 'system', `Safely merged backup records with current database.`);
+        return {
+          success: true,
+          message: 'Successfully merged backup records with current database without overwriting existing data.',
+        };
+      }
     } catch (e: any) {
       console.error('Failed to restore backup:', e);
       throw new Error(`Restore failed: ${e.message}`);

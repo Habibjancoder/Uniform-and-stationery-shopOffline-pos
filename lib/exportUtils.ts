@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import * as XLSX from 'xlsx';
 import { Sale, ShopSettings } from '@/types';
 
 export function exportToCSV(filename: string, rows: object[]) {
@@ -37,8 +35,9 @@ export function exportToCSV(filename: string, rows: object[]) {
   }
 }
 
-export function exportToExcel(filename: string, sheetName: string, rows: object[]) {
+export async function exportToExcel(filename: string, sheetName: string, rows: object[]) {
   if (!rows || !rows.length) return;
+  const XLSX = await import('xlsx');
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName || 'Data');
@@ -61,7 +60,8 @@ export function safePdfText(str: string | undefined | null): string {
 /**
  * Beautiful, structured A4 PDF Generator for Invoices
  */
-export function generateInvoicePDF(sale: Sale, settings: ShopSettings) {
+export async function generateInvoicePDF(sale: Sale, settings: ShopSettings) {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -297,11 +297,12 @@ export function generateInvoicePDF(sale: Sale, settings: ShopSettings) {
 /**
  * Beautiful Monthly & Period Sales Report PDF Generator
  */
-export function generateMonthlySalesReportPDF(
+export async function generateMonthlySalesReportPDF(
   periodTitle: string,
   sales: Sale[],
   settings: ShopSettings
 ) {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -461,7 +462,8 @@ export function generateMonthlySalesReportPDF(
 /**
  * Beautiful Report PDF Generator
  */
-export function exportReportToPDF(title: string, headers: string[], rows: (string | number)[][], filename: string) {
+export async function exportReportToPDF(title: string, headers: string[], rows: (string | number)[][], filename: string) {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'pt',

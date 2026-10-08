@@ -371,13 +371,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ settings, lang }) => {
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm">Product-Wise Sales & Margin Performance</h3>
-              <div className="w-64">
+              <div className="w-80">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter product name..."
-                  className="w-full px-3 py-1 border rounded-lg text-xs"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900"
                 />
               </div>
             </div>
@@ -426,13 +426,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ settings, lang }) => {
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm">School Uniform Size & Color Stock Matrix</h3>
-              <div className="w-64">
+              <div className="w-80">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter school or uniform item..."
-                  className="w-full px-3 py-1 border rounded-lg text-xs"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900"
                 />
               </div>
             </div>

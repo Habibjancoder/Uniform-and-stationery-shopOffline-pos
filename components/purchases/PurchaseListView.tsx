@@ -100,15 +100,15 @@ export const PurchaseListView: React.FC<PurchaseListViewProps> = ({ lang, onRefr
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-3 text-xs">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+      <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4 text-xs">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by invoice number, supplier name, user..."
-            className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+            className="w-full pl-11 pr-4 py-2.5 h-11 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-slate-50 text-slate-900 placeholder:text-slate-400"
           />
         </div>
 
